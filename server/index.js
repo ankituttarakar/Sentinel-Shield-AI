@@ -10,78 +10,198 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// ✅ 1. API KEY VALIDATION
+// ENV
 const API_KEY = process.env.GEMINI_API_KEY?.trim();
-if (!API_KEY || API_KEY.includes("YOUR_API_KEY")) {
-  console.error("❌ ERROR: Valid GEMINI_API_KEY is missing from .env");
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!API_KEY || !MONGO_URI) {
+  console.error("Missing ENV variables");
   process.exit(1);
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-// ✅ 2. DATABASE CONNECTION
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("❌ MongoDB Connection Error:", err.message));
+// DB
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => {
+    console.error("DB Error:", err.message);
+    process.exit(1);
+  });
 
-// ✅ 3. SCHEMA & MODEL
+// SCHEMA (UPDATED: score → risk)
 const ReviewSchema = new mongoose.Schema({
   code: String,
-  review: String,
+  review: Object,
+  risk: String,
   createdAt: { type: Date, default: Date.now }
 });
+
 const Review = mongoose.model("Review", ReviewSchema);
 
-// ✅ 4. ROUTES
+// ----------------------
+// HELPERS
+// ----------------------
 
-// GET HISTORY
+const getRiskLevel = (vulnerabilities) => {
+  const severities = (vulnerabilities || []).map(v =>
+    (v.severity || "").toLowerCase().trim()
+  );
+
+  if (severities.includes("critical")) return "CRITICAL";
+  if (severities.includes("high")) return "HIGH";
+  if (severities.includes("medium")) return "MEDIUM";
+  return "LOW";
+};
+
+// ----------------------
+// ROUTES
+// ----------------------
+
+// GET history
 app.get("/api/reviews", async (req, res) => {
   try {
     const data = await Review.find().sort({ createdAt: -1 });
     res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch history" });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch reviews" });
   }
 });
 
-// POST ANALYSIS
+// ANALYZE
 app.post("/api/review", async (req, res) => {
   const { code } = req.body;
-  if (!code) return res.status(400).json({ error: "No code provided" });
+
+  if (!code) {
+    return res.status(400).json({ error: "No code provided" });
+  }
 
   try {
-    console.log("🔥 INITIATING ANALYSIS WITH GEMINI 2.5 FLASH...");
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const prompt = `Analyze this code for security vulnerabilities, bugs, and improvements. Provide a clear 'Quick Review' section followed by specific code fixes:\n\n${code}`;
+
+    const prompt = `
+You are a strict cybersecurity auditor AI.
+
+Return ONLY valid JSON:
+
+{
+  "summary": "string",
+  "vulnerabilities": [
+    {
+      "type": "string",
+      "severity": "Critical/High/Medium/Low",
+      "description": "string",
+      "fix": "string"
+    }
+  ],
+  "improvements": ["string"]
+}
+
+Rules:
+- IDOR, Injection, Auth flaws → Critical
+- XSS → High
+- Data Exposure → Medium
+- Always include severity + fix
+
+Code:
+${code}
+`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const reviewText = response.text();
 
-    const savedReview = await Review.create({ code, review: reviewText });
-    res.json({ review: reviewText, id: savedReview._id });
+    let text = response.text().replace(/```json|```/g, "").trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = {
+        summary: text,
+        vulnerabilities: [],
+        improvements: ["AI parsing failed"]
+      };
+    }
+
+    // CLEAN + NORMALIZE
+    parsed.vulnerabilities = (parsed.vulnerabilities || []).map(v => {
+      const sev = (v.severity || "").toLowerCase().trim();
+
+      let normalized =
+        sev === "critical" ? "Critical" :
+        sev === "high" ? "High" :
+        sev === "medium" ? "Medium" :
+        sev === "low" ? "Low" :
+        "Medium";
+
+      return {
+        type: typeof v.type === "string" ? v.type : "Unknown",
+        severity: normalized,
+        description: typeof v.description === "string"
+          ? v.description
+          : "No description",
+        fix: typeof v.fix === "string"
+          ? v.fix
+          : "Apply proper security controls"
+      };
+    });
+
+    parsed.improvements = (parsed.improvements || []).map(i =>
+      typeof i === "string" ? i : JSON.stringify(i)
+    );
+
+    // ✅ RISK LOGIC (replaces score)
+    const risk = getRiskLevel(parsed.vulnerabilities);
+
+    const saved = await Review.create({
+      code,
+      review: parsed,
+      risk
+    });
+
+    res.json({
+      review: parsed,
+      risk,
+      id: saved._id
+    });
+
   } catch (error) {
-    console.error("❌ GEMINI SDK ERROR:", error.message);
-    res.status(500).json({ error: "AI Analysis Failed", message: error.message });
+    console.error("AI ERROR:", error.message);
+
+    const fallback = {
+      summary: "AI unavailable. Using fallback.",
+      vulnerabilities: [],
+      improvements: ["Retry later"]
+    };
+
+    const saved = await Review.create({
+      code,
+      review: fallback,
+      risk: "LOW"
+    });
+
+    res.json({
+      review: fallback,
+      risk: "LOW",
+      id: saved._id
+    });
   }
 });
 
-// ✅ DELETE ANALYSIS HISTORY ITEM
+// DELETE
 app.delete("/api/review/:id", async (req, res) => {
   try {
-    const { id } = req.params;
-    const deleted = await Review.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ error: "Review not found" });
-    res.json({ message: "Analysis deleted successfully", id });
-  } catch (err) {
-    console.error("❌ DELETE ERROR:", err.message);
-    res.status(500).json({ error: "Failed to delete item" });
+    const deleted = await Review.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Not found" });
+
+    res.json({ message: "Deleted", id: req.params.id });
+  } catch {
+    res.status(500).json({ error: "Delete failed" });
   }
 });
 
-// ✅ 5. START SERVER
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

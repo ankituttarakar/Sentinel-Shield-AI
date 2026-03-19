@@ -14,6 +14,12 @@
   --color-emerald-400: #34d399;
   --color-emerald-500: #10b981;
 
+  /* 🔥 Added Severity Colors */
+  --color-critical: #ef4444;
+  --color-high: #f97316;
+  --color-medium: #eab308;
+  --color-low: #3b82f6;
+
   /* Smooth Animations */
   --animate-slide-up: slideUp 0.5s ease-out forwards;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -37,25 +43,15 @@
   }
 
   /* Professional Scrollbars */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     @apply bg-slate-800 rounded-full border-2 border-transparent;
   }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-700;
-  }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-700; }
 }
 
-/* Typography Customization */
+/* Typography & Custom Utilities */
 @layer utilities {
   .prose {
     --tw-prose-body: #94a3b8;
@@ -69,21 +65,32 @@
   .glass-panel {
     @apply bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 shadow-2xl;
   }
+
+  /* 🔥 NEW: Severity Badge Utility */
+  .badge-severity {
+    @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border;
+  }
+
+  /* 🔥 NEW: Circular Score Utility (for a radial progress look) */
+  .score-ring {
+    transition: stroke-dashoffset 0.5s ease-in-out;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+  }
 }
 
-/* Code Highlighting Tweaks - Removed !important and used standard CSS */
+/* Code Highlighting & Layout Components */
 pre {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-  padding: 0;
-  border-radius: 1rem;
-  background-color: #020617;
-  border: 1px solid #1e293b;
-  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
-  overflow: hidden;
+  @apply mt-8 mb-8 p-0 rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-inner;
 }
 
 code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9em;
 }
+
+/* 🔥 Severity Variants */
+.severity-critical { @apply bg-critical/10 text-critical border-critical/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]; }
+.severity-high { @apply bg-high/10 text-high border-high/30; }
+.severity-medium { @apply bg-medium/10 text-medium border-medium/30; }
+.severity-low { @apply bg-low/10 text-low border-low/30; }

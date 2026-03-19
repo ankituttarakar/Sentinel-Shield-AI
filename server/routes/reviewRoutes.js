@@ -3,12 +3,12 @@ import { analyzeCode } from "../controllers/reviewController.js";
 
 const router = express.Router();
 
-// ✅ POST analyze
-router.post("/analyze", analyzeCode);
+// ✅ FIXED ROUTE
+router.post("/review", analyzeCode);
 
-// 🔥 ADD THIS (fixes your 404)
-router.get("/", (req, res) => {
-  res.json([]); // return empty for now
+// (optional)
+router.get("/reviews", (req, res) => {
+  res.json([]);
 });
 
 export default router;
