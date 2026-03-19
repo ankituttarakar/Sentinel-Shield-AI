@@ -1,0 +1,89 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /* Sentinel Custom Brand Palette */
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+
+  /* Smooth Animations */
+  --animate-slide-up: slideUp 0.5s ease-out forwards;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Base Styles */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* Professional Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full border-2 border-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-700;
+  }
+}
+
+/* Typography Customization */
+@layer utilities {
+  .prose {
+    --tw-prose-body: #94a3b8;
+    --tw-prose-headings: #f8fafc;
+    --tw-prose-links: #3b82f6;
+    --tw-prose-bold: #34d399;
+    --tw-prose-pre-bg: #020617;
+    --tw-prose-pre-border: #1e293b;
+  }
+
+  .glass-panel {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 shadow-2xl;
+  }
+}
+
+/* Code Highlighting Tweaks - Removed !important and used standard CSS */
+pre {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding: 0;
+  border-radius: 1rem;
+  background-color: #020617;
+  border: 1px solid #1e293b;
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+}
