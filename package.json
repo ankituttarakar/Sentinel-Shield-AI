@@ -1,0 +1,29 @@
+{
+  "name": "sentinel-code-ai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+  "client": "npm run dev --prefix client",
+  "server": "cd server && node index.js",
+  "dev": "concurrently \"npm run server\" \"npm run client\""
+    },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ankituttarakar/Sentinel-Shield-AI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ankituttarakar/Sentinel-Shield-AI/issues"
+  },
+  "homepage": "https://github.com/ankituttarakar/Sentinel-Shield-AI#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
