@@ -1,40 +1,51 @@
 import React from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
+const COLORS = {
+  CRITICAL: "#ef4444",
+  HIGH: "#f97316",
+  MEDIUM: "#eab308",
+  LOW: "#22c55e",
+};
 
-const StatChart = ({ data }) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
-        No data available
-      </div>
-    );
-  }
+const StatChart = ({ vulnerabilities = [] }) => {
+  const dataMap = (vulnerabilities || []).reduce((acc, curr) => {
+    const sev = (curr.severity || "LOW").toUpperCase();
+    acc[sev] = (acc[sev] || 0) + 1;
+    return acc;
+  }, {});
+
+  const chartData = Object.keys(dataMap).map((key) => ({
+    name: key,
+    value: dataMap[key],
+    fill: COLORS[key] || "#64748b",
+  }));
+
+  if (chartData.length === 0) return <div className="text-center text-slate-500 text-xs">No Data</div>;
 
   return (
-    <div style={{ width: "100%", height: 300 }}>
-      <ResponsiveContainer width="100%" height={300}>
+    /* FIX: The container MUST have a height for ResponsiveContainer to work.
+       We use h-full and a min-height.
+    */
+    <div className="w-full h-full min-h-[200px] flex items-center justify-center">
+      <ResponsiveContainer width="99%" height={250}> 
         <PieChart>
           <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
+            data={chartData}
+            cx="50%"
+            cy="50%"
             innerRadius={60}
-            outerRadius={90}
-            paddingAngle={3}
+            outerRadius={80}
+            paddingAngle={5}
+            dataKey="value"
           >
-            {data.map((entry, index) => (
-              <Cell key={index} fill={COLORS[index % COLORS.length]} />
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip 
+            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px' }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>
